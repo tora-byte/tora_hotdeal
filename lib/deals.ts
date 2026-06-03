@@ -13,6 +13,11 @@ export function calculateDiscount(originalPrice: number, salePrice: number) {
 export function getMallName(url: string) {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, "");
+
+    if (hostname === "musinsa.com" || hostname.endsWith(".musinsa.com")) {
+      return "MUSINSA";
+    }
+
     return hostname.split(".")[0] || "기타";
   } catch {
     return "기타";

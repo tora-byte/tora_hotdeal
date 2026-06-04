@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getMallName } from "@/lib/deals";
+import { formatWon } from "@/lib/format";
 
 type ProductPreview = {
   finalUrl: string;
@@ -10,10 +11,17 @@ type ProductPreview = {
   mall: string;
   title: string | null;
   imageUrl: string | null;
-  price: number | null;
   originalPrice: number | null;
-  salePrice: number | null;
+  currentPrice: number | null;
+  discountAmount: number | null;
   discountRate: number | null;
+};
+
+type PricePreview = {
+  originalPrice: number;
+  currentPrice: number;
+  discountAmount: number;
+  discountRate: number;
 };
 
 type PreviewState = "idle" | "loading" | "success" | "error";
@@ -22,6 +30,7 @@ export function DealSubmitForm() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [pricePreview, setPricePreview] = useState<PricePreview | null>(null);
   const [previewMall, setPreviewMall] = useState("");
   const [previewState, setPreviewState] = useState<PreviewState>("idle");
   const [submitted, setSubmitted] = useState(false);
@@ -35,6 +44,7 @@ export function DealSubmitForm() {
     if (!trimmedUrl) {
       setPreviewMall("");
       setImagePreviewUrl(null);
+      setPricePreview(null);
       setPreviewState("idle");
       return;
     }
@@ -44,6 +54,7 @@ export function DealSubmitForm() {
     } catch {
       setPreviewMall("");
       setImagePreviewUrl(null);
+      setPricePreview(null);
       setPreviewState("idle");
       return;
     }
@@ -65,6 +76,7 @@ export function DealSubmitForm() {
 
         setPreviewMall(preview.mall);
         setImagePreviewUrl(preview.imageUrl);
+        setPricePreview(getPricePreview(preview));
 
         if (preview.title) {
           setTitle((currentTitle) => currentTitle || preview.title || "");
@@ -75,6 +87,7 @@ export function DealSubmitForm() {
         if (!abortController.signal.aborted) {
           setPreviewMall("");
           setImagePreviewUrl(null);
+          setPricePreview(null);
           setPreviewState("error");
         }
       }
@@ -148,9 +161,30 @@ export function DealSubmitForm() {
           <p className="font-bold text-slate-500">쇼핑몰명</p>
           <strong>{mall}</strong>
         </div>
+        {pricePreview ? (
+          <>
+            <div>
+              <p className="font-bold text-slate-500">원가</p>
+              <strong>{formatWon(pricePreview.originalPrice)}</strong>
+            </div>
+            <div>
+              <p className="font-bold text-slate-500">할인가</p>
+              <strong>{formatWon(pricePreview.currentPrice)}</strong>
+            </div>
+            <div>
+              <p className="font-bold text-slate-500">할인</p>
+              <strong>
+                {formatWon(pricePreview.discountAmount)} / {pricePreview.discountRate}%
+              </strong>
+            </div>
+          </>
+        ) : null}
       </section>
 
       {previewState === "loading" ? <p className="text-sm font-bold text-slate-500">상품 정보를 불러오는 중입니다.</p> : null}
+      {previewState === "success" && !pricePreview ? (
+        <p className="text-sm font-bold text-slate-500">가격 정보 자동 추출 실패</p>
+      ) : null}
       {previewState === "error" ? (
         <p className="text-sm font-bold text-slate-500">상품 정보를 자동으로 불러오지 못했습니다.</p>
       ) : null}
@@ -163,4 +197,24 @@ export function DealSubmitForm() {
       </button>
     </form>
   );
+}
+
+function getPricePreview(preview: ProductPreview) {
+  const { originalPrice, currentPrice, discountAmount, discountRate } = preview;
+
+  if (
+    typeof originalPrice !== "number" ||
+    typeof currentPrice !== "number" ||
+    typeof discountAmount !== "number" ||
+    typeof discountRate !== "number"
+  ) {
+    return null;
+  }
+
+  return {
+    originalPrice,
+    currentPrice,
+    discountAmount,
+    discountRate
+  };
 }
